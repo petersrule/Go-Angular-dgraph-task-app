@@ -1,1 +1,78 @@
+body {
+  padding: 0;
+  margin: 0;
+  background: #f1f1f1f1;
+}
+
+.container {
+  padding: 10vh 17rem;
+  margin: 0 auto;
+  width: 40vw;
+  text-align: center;
+}
+
+.todos {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  margin: 2rem 0;
+}
+
+.todo {
+  padding: 0.8rem 1rem 0 0.5rem;
+  border: 3px solid #e3e3e3;
+  margin: 0.4rem;
+}
+
+.todo label {
+  font-size: 1.2rem;
+}
+
+.todo label:hover {
+  cursor: pointer;
+}
+
+.todo input {
+  position: absolute;
+  visibility: hidden;
+}
+
+.todo i {
+  display: inline-block;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  text-align: center;
+  line-height: 2rem;
+  font-size: 13px;
+  margin-right: 1rem;
+}
+
+#new-todo input,
+.container .addTodoButton {
+  width: 20rem;
+  margin: 0.2rem 0;
+  padding: 0.1rem 0;
+}
+
+.todo button {
+  float: right;
+  margin: 0 0.1rem 0.7rem 0.3rem;
+  border: none;
+  color: #e48989;
+  font-size: 1.7rem;
+  cursor: pointer;
+  padding: 0;
+  background: #f1f1f1f1;
+}
+
+.container .addTodoButton {
+  cursor: pointer;
+}
+
+.todo i,
+.todo span {
+  float: left;
+}
 /* You can add global styles to this file, and also import other style files */
