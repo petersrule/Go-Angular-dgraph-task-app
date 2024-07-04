@@ -1,25 +1,26 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import {
+  HttpClientModule,
+  HttpClient,
+  HttpHeaders,
+} from '@angular/common/http';
 
 interface Task {
-  id?: string;
-  task: string;
-  isCompleted: boolean;
+  ID?: string;
+  Task: string;
+  IsCompleted: boolean;
 }
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, FormsModule],
+  imports: [RouterOutlet, FormsModule, HttpClientModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
-export class AppComponent {
-  tasks: Task[] = [
-    { id: '1', task: 'hExample Task 1', isCompleted: false },
-    { id: '2', task: 'ZExample Task 2', isCompleted: true },
-    { id: '3', task: 'XExample Task 3', isCompleted: false },
-  ];
+export class AppComponent implements OnInit {
+  tasks: Task[] = [];
 
   newTodoText = '';
   filterTodos = '';
@@ -27,44 +28,82 @@ export class AppComponent {
 
   filteredTasks: Task[] = this.tasks;
 
-  uncompletedTasksNumber: number = this.tasks.filter(
-    (task) => !task.isCompleted
-  ).length;
-
-  toggleCompletionStatus(index: number) {
-    let task = this.tasks[index];
-    task.isCompleted = !task.isCompleted;
-    this.updateUncompletedTasksNumber();
+  constructor(private http: HttpClient) {}
+  ngOnInit(): void {
+    this.getTasks();
   }
 
-  removeTask(index: number) {
-    this.tasks.splice(index, 1);
-    this.updateUncompletedTasksNumber();
+  getTasks() {
+    this.http.get<Task[]>('/api/tasks').subscribe((tasks) => {
+      this.tasks = tasks;
+      this.updateTasks();
+    });
+  }
+
+  uncompletedTasksNumber: number = this.tasks.filter(
+    (task) => !task.IsCompleted
+  ).length;
+
+  toggleCompletionStatus(ID: string | undefined) {
+    // Make sure the ID is not undefined
+    if (ID == undefined) {
+      console.error('Task is undefined');
+
+      return;
+    }
+
+    // Update the completion status of task on the server
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    this.http
+      .put(`/api/update/task/completion/${ID}`, null, { headers })
+      .subscribe(() => {
+        let task = this.tasks.find((task) => task.ID === ID);
+        if (task == undefined) {
+          console.error('Task is undefined');
+          return;
+        }
+        task.IsCompleted = !task.IsCompleted;
+        this.updateTasks();
+      });
+  }
+
+  removeTask(ID: string | undefined) {
+    // Make sure the ID is not undefined
+    if (ID == undefined) {
+      console.error('Task is undefined');
+
+      return;
+    }
+
+    // Delete the task from the server
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    this.http.delete(`/api/delete/task/${ID}`, { headers }).subscribe(() => {
+      this.tasks = this.tasks.filter((task) => task.ID !== ID);
+      this.updateTasks();
+    });
   }
 
   updateUncompletedTasksNumber() {
     this.uncompletedTasksNumber = this.tasks.filter(
-      (task) => !task.isCompleted
+      (task) => !task.IsCompleted
     ).length;
   }
 
-  addTask(task: string) {
-    if (task == '') {
-      return;
-    }
-    let id = Math.floor(Math.random() * 10000).toString();
-    this.tasks.unshift({
-      id,
-      task,
-      isCompleted: false,
-    });
-    this.updateUncompletedTasksNumber();
+  // Add a new task to the server
+  addTask() {
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    this.http
+      .post<Task>('/api/add/task', { Task: this.newTodoText }, { headers })
+      .subscribe((newTask) => {
+        this.tasks.unshift(newTask);
+        this.updateTasks();
+      });
     this.newTodoText = '';
   }
 
   onKeyUpFilter() {
     this.filteredTasks = this.tasks.filter((task) =>
-      task.task.toLocaleLowerCase().includes(this.filterTodos.toLowerCase())
+      task.Task.toLocaleLowerCase().includes(this.filterTodos.toLowerCase())
     );
   }
 
@@ -76,13 +115,59 @@ export class AppComponent {
     if (this.filterFinishedTasks) {
       this.filteredTasks = this.filteredTasks.filter(
         (task) =>
-          !task.isCompleted &&
-          task.task.toLocaleLowerCase().includes(this.filterTodos.toLowerCase())
+          !task.IsCompleted &&
+          task.Task.toLocaleLowerCase().includes(this.filterTodos.toLowerCase())
       );
     } else {
       this.filteredTasks = this.tasks.filter((task) =>
-        task.task.toLocaleLowerCase().includes(this.filterTodos.toLowerCase())
+        task.Task.toLocaleLowerCase().includes(this.filterTodos.toLowerCase())
       );
+    }
+  }
+
+  updateTasks() {
+    this.updateUncompletedTasksNumber();
+    this.filter();
+  }
+
+  // Edit a task on the server
+  editTask(taskID: string | undefined) {
+    let newTaskText = document.getElementById(taskID + '_task')?.textContent;
+    // Log the Task of the task that is being edited
+    console.log('new task:', newTaskText);
+
+    // Make sure the ID is not undefined or exit function
+    if (taskID == undefined) {
+      console.error('Task is undefined');
+
+      return;
+    }
+
+    // Get the task by the ID and change the task.Task to match newTask
+    let task = this.tasks.find((task) => task.ID === taskID);
+    if (task == undefined) {
+      console.error('Task is undefined');
+      return;
+    }
+
+    let newTask = {
+      ID: taskID,
+      Task: newTaskText,
+      IsCompleted: task.IsCompleted,
+    };
+
+    // Update the task on the server
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    this.http
+      .put<Task>(`/api/update/task/${taskID}`, newTask, { headers })
+      .subscribe(() => {
+        this.updateTasks();
+      });
+  }
+
+  enteredData(event: KeyboardEvent, taskID: string | undefined) {
+    if (event.key === 'Enter') {
+      (event.target as HTMLElement).blur(); // Manually remove focus
     }
   }
 }
